@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="pt-BR" ng-app="studyFlowApp">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="StudyFlow — Painel de Estudos Responsivo desenvolvido com AngularJS (Módulos, Diretivas, Controladores, Serviços e Filtros)."
+    />
+    <title>StudyFlow | Painel de Estudos AngularJS</title>
+    <link rel="stylesheet" href="css/style.css" />
+
+    <!-- AngularJS 1.8.3 via CDN oficial -->
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.3/angular.min.js"></script>
+  </head>
+  <body ng-controller="MainController">
+    <!-- Cabeçalho Semântico Responsivo -->
+    <header class="header">
+      <div class="header-inner">
+        <div class="brand-group">
+          <span class="logo-badge" aria-hidden="true">SF</span>
+          <div>
+            <span class="brand-name">StudyFlow</span>
+            <span class="brand-tag">Painel AngularJS</span>
+          </div>
+        </div>
+
+        <nav class="nav-links" aria-label="Navegação principal">
+          <a href="#secao-tarefas" class="nav-link">Tarefas</a>
+          <a href="#secao-conteudos" class="nav-link">Conteúdos (Abas)</a>
+          <a href="#secao-faq" class="nav-link">Ajuda (Acordeão)</a>
+          <span class="status-pill">
+            {{ totalConcluidas() }}/{{ tarefas.length }} concluídas
+          </span>
+        </nav>
+      </div>
+    </header>
+
+    <!-- Conteúdo Principal -->
+    <main class="main-container">
+      <!-- =========================================================
+           SEÇÃO 1: TAREFAS, BARRA DE PROGRESSO, DROPDOWN E PAGINAÇÃO
+           ========================================================= -->
+      <section id="secao-tarefas" class="section-block" aria-labelledby="titulo-tarefas">
+        <div>
+          <h1 id="titulo-tarefas" class="section-title">Minhas Tarefas de Estudo</h1>
+          <p class="section-subtitle">
+            Gerencie suas atividades com two-way data binding (ng-model), filtre pelo menu suspenso e navegue entre páginas.
+          </p>
+        </div>
+
+        <!-- Cartões de Resumo -->
+        <div class="stats-grid">
+          <article class="stat-card">
+            <span class="stat-label">Total Cadastrado</span>
+            <strong class="stat-value">{{ tarefas.length | number:0 }}</strong>
+          </article>
+          <article class="stat-card">
+            <span class="stat-label">Concluídas</span>
+            <strong class="stat-value text-success">{{ totalConcluidas() | number:0 }}</strong>
+          </article>
+          <article class="stat-card">
+            <span class="stat-label">Pendentes</span>
+            <strong class="stat-value text-primary">{{ totalPendentes() | number:0 }}</strong>
+          </article>
+        </div>
+
+        <!-- Componente Obrigatório 3: Diretiva Barra de Progresso -->
+        <div class="card-surface">
+          <sf-progress-bar
+            progress="percentualConcluido()"
+            label="Progresso geral das tarefas concluídas"
+          ></sf-progress-bar>
+        </div>
+
+        <!-- Formulário com ng-model e ng-submit -->
+        <form class="add-form" ng-submit="adicionarTarefa()" novalidate>
+          <input
+            type="text"
+            class="input-field"
+            placeholder="Adicionar nova meta ou atividade de estudo..."
+            aria-label="Título da nova tarefa"
+            ng-model="novaTarefa.titulo"
+          />
+
+          <select
+            class="select-field"
+            aria-label="Tipo de estudo"
+            ng-model="novaTarefa.disciplina"
+            ng-options="tipo for tipo in tiposEstudo"
+          ></select>
+
+          <button type="submit" class="btn-primary">+ Adicionar</button>
+        </form>
+
+        <!-- Barra de ferramentas com Diretiva Menu Suspenso -->
+        <div class="toolbar">
+          <p class="result-count">
+            Mostrando <strong>{{ obterTarefasPaginadas().length }}</strong> de
+            <strong>{{ obterTarefasFiltradas().length }}</strong> tarefa(s)
+          </p>
+
+          <!-- Componente Obrigatório 5: Diretiva Menu Suspenso -->
+          <sf-dropdown-menu
+            label="rotuloFiltro()"
+            options="opcoesFiltro"
+          ></sf-dropdown-menu>
+        </div>
+
+        <!-- Lista Paginada de Tarefas com ng-change, ng-click e Filtro Customizado -->
+        <ul class="task-list">
+          <li
+            class="task-item"
+            ng-repeat="tarefa in obterTarefasPaginadas() track by tarefa.id"
+            ng-class="{ 'task-done': tarefa.concluida }"
+          >
+            <label class="task-label">
+              <input
+                type="checkbox"
+                class="checkbox"
+                ng-model="tarefa.concluida"
+                ng-change="aoAlterarStatusTarefa(tarefa)"
+              />
+              <span class="task-title">{{ tarefa.titulo }}</span>
+            </label>
+
+            <div class="task-actions">
+              <span class="tag">{{ tarefa.disciplina }}</span>
+              <!-- Uso do filtro customizado statusTarefa -->
+              <span
+                class="tag-status"
+                ng-class="tarefa.concluida ? 'tag-done' : 'tag-pending'"
+              >
+                {{ tarefa.concluida | statusTarefa }}
+              </span>
+              <button
+                type="button"
+                class="btn-delete"
+                ng-click="removerTarefa(tarefa.id)"
+              >
+                Remover
+              </button>
+            </div>
+          </li>
+        </ul>
+
+        <!-- Componente Obrigatório 2: Diretiva Paginação -->
+        <sf-pagination
+          current-page="paginaAtual"
+          total-pages="totalPaginas()"
+          on-page-change="mudarPagina(page)"
+        ></sf-pagination>
+      </section>
+
+      <!-- =========================================================
+           SEÇÃO 2: CONTEÚDOS EM ABAS + SIMULADOR DE BARRA DE PROGRESSO
+           ========================================================= -->
+      <section id="secao-conteudos" class="section-block" aria-labelledby="titulo-conteudos">
+        <div>
+          <h2 id="titulo-conteudos" class="section-title">Conteúdos e Entrega</h2>
+          <p class="section-subtitle">
+            Organização de conteúdos através da diretiva de Abas e simulador interativo de envio.
+          </p>
+        </div>
+
+        <!-- Componente Obrigatório 4: Diretiva Abas (Tabs) -->
+        <sf-tabs tabs="abasConteudo"></sf-tabs>
+
+        <!-- Simulador interativo de upload reutilizando a Diretiva Barra de Progresso -->
+        <div class="card-surface">
+          <sf-progress-bar
+            progress="progressoUpload"
+            label="Simulador de Upload do Pacote da Atividade"
+          ></sf-progress-bar>
+
+          <div class="button-group">
+            <button
+              type="button"
+              class="btn-primary"
+              ng-disabled="enviandoUpload"
+              ng-click="iniciarSimulacaoUpload()"
+            >
+              {{ enviandoUpload ? 'Enviando...' : 'Simular Upload Automático' }}
+            </button>
+            <button
+              type="button"
+              class="btn-secondary"
+              ng-disabled="enviandoUpload || progressoUpload >= 100"
+              ng-click="avancarUploadManual()"
+            >
+              +25% Manual
+            </button>
+            <button type="button" class="btn-secondary" ng-click="zerarUpload()">
+              Zerar Barra
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- =========================================================
+           SEÇÃO 3: ACORDEÃO (FAQ) + DEMONSTRAÇÃO DOS 3 TIPOS DE TOAST
+           ========================================================= -->
+      <section id="secao-faq" class="section-block" aria-labelledby="titulo-faq">
+        <div>
+          <h2 id="titulo-faq" class="section-title">Perguntas Frequentes (FAQ)</h2>
+          <p class="section-subtitle">
+            Seções expansíveis e colapsáveis implementadas com a diretiva Acordeão.
+          </p>
+        </div>
+
+        <!-- Componente Obrigatório 1: Diretiva Acordeão -->
+        <sf-accordion items="perguntasFaq"></sf-accordion>
+
+        <!-- Painel rápido para testar todos os tipos de Notificação Toast -->
+        <div class="card-surface">
+          <h3>Demonstração de Feedbacks (ToastService + Diretiva Toast)</h3>
+          <p class="section-subtitle">
+            Dispare abaixo qualquer variação da Notificação Toast:
+          </p>
+          <div class="button-group">
+            <button
+              type="button"
+              class="btn-secondary"
+              ng-click="notificar('Operação concluída com sucesso!', 'sucesso')"
+            >
+              Testar Toast de Sucesso
+            </button>
+            <button
+              type="button"
+              class="btn-secondary"
+              ng-click="notificar('Lembrete: revise as diretivas antes da entrega.', 'info')"
+            >
+              Testar Toast Informativo
+            </button>
+            <button
+              type="button"
+              class="btn-secondary"
+              ng-click="notificar('Erro ao salvar: preencha os campos obrigatórios.', 'erro')"
+            >
+              Testar Toast de Erro
+            </button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Rodapé Semântico -->
+    <footer class="footer">
+      <p>StudyFlow — Aplicação Responsiva em AngularJS • Engenharia de Software (UCSAL)</p>
+    </footer>
+
+    <!-- Componente Obrigatório 6: Diretiva Notificação Toast -->
+    <sf-toast toast="toast" on-close="fecharToast()"></sf-toast>
+
+    <!-- Scripts Modulares da Aplicação AngularJS -->
+    <script src="js/services.js"></script>
+    <script src="js/directives.js"></script>
+    <script src="js/app.js"></script>
+  </body>
+</html>
